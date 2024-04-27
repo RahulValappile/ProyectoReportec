@@ -1,0 +1,71 @@
+#!/usr/bin/python3
+import rospy
+from nav_msgs.msg import Odometry
+from tf.transformations import euler_from_quaternion
+from geometry_msgs.msg import Point, Twist
+from numpy import arctan2
+import RPi.GPIO as GPIO
+
+# Definir pines GPIO para controlar la dirección de los motores
+PIN_MOTOR_IZQUIERDA = 17
+PIN_MOTOR_DERECHA = 18
+x = 0
+y = 0
+theta = 0
+
+# Inicializar pines GPIO
+GPIO.setmode(GPIO.BCM)
+GPIO.setup(PIN_MOTOR_IZQUIERDA, GPIO.OUT)
+GPIO.setup(PIN_MOTOR_DERECHA, GPIO.OUT)
+
+def newOdom(msg):
+    global x
+    global y
+    global theta
+
+    x = msg.pose.pose.position.x
+    y = msg.pose.pose.position.y
+
+    rot_q = msg.pose.pose.orientation.theta
+    (roll, pitch, theta) = euler_from_quaternion([rot_q.x, rot_q.y, rot_q.z, rot_q.w])
+
+sub = rospy.Subscriber("/poseupdate", Odometry, newOdom)
+
+
+speed = Twist()
+
+goal = Point()
+goal.x = 10
+goal.y = 0
+
+def goTo(goal):
+    global x
+    global y
+    global theta
+    global sub
+    #global pub
+    #global speed
+
+    arrived = False
+    while not arrived:
+        inc_x = goal.x -x
+        inc_y = goal.y -y
+
+        GPIO.OUT(PIN_MOTOR_DERECHA, TRUE)
+        GPIO.OUT(PIN_MOTOR_DERECHA, TRUE)
+
+
+        if abs(inc_x) <1 and abs(inc_y)< 1:
+         	arrived = True
+            print("destination reached!")
+        
+
+
+goTo(goal)
+a = int(input("want to go back ? (0/1)  "))
+if (a == 1):
+    goal.x = 0
+    goal.y = 0
+    GPIO.OUT(PIN_MOTOR_DERECHA, False)
+    GPIO.OUT(PIN_MOTOR_DERECHA, False)
+    goTo(goal)
